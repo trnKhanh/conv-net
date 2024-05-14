@@ -10,26 +10,36 @@ from torchvision import transforms
 from skimage.feature import hog
 from PIL import Image
 
+
 class GrayToRGB(object):
     def __call__(self, image: Image.Image):
         if image.mode == "L":
             image = image.convert("RGB")
         return image
 
+
 def get_dataset(name):
     if name == "MNIST":
         transform = transforms.ToTensor()
-        return 10, torchvision.datasets.MNIST(
-            "data", train=True, transform=transform, download=True
-        ), torchvision.datasets.MNIST(
-            "data", train=False, transform=transform, download=True
+        return (
+            10,
+            torchvision.datasets.MNIST(
+                "data", train=True, transform=transform, download=True
+            ),
+            torchvision.datasets.MNIST(
+                "data", train=False, transform=transform, download=True
+            ),
         )
     elif name == "FashionMNIST":
         transform = transforms.ToTensor()
-        return 10, torchvision.datasets.FashionMNIST(
-            "data", train=True, transform=transform, download=True
-        ), torchvision.datasets.FashionMNIST(
-            "data", train=False, transform=transform, download=True
+        return (
+            10,
+            torchvision.datasets.FashionMNIST(
+                "data", train=True, transform=transform, download=True
+            ),
+            torchvision.datasets.FashionMNIST(
+                "data", train=False, transform=transform, download=True
+            ),
         )
 
     elif name == "Caltech101":
@@ -57,6 +67,6 @@ def get_dataset(name):
             "data", transform=transform, download=True
         )
         train_dataset, valid_dataset = random_split(dataset, [0.8, 0.2])
-        return 256, train_dataset, valid_dataset
+        return 257, train_dataset, valid_dataset
     else:
         raise ValueError(f"Dataset {name} does not exist")

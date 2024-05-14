@@ -15,7 +15,7 @@ def train_one_epoch(epoch, model, optimizer, loss_fn, dataloader, device):
             # Move tensor to device used to train
             samples = samples.to(device)
             labels = labels.to(device)
-            
+
             # Training loop in pytorch
             preds = model(samples)
             loss = loss_fn(preds, labels)
@@ -23,7 +23,7 @@ def train_one_epoch(epoch, model, optimizer, loss_fn, dataloader, device):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
+
             # Compute average loss and accuracy
             loss_value = loss.item()
             pred_classes = torch.argmax(preds, dim=1)
@@ -47,7 +47,7 @@ def valid_one_epoch(model, loss_fn, train_dataloader, valid_dataloader, device):
     correct_count = 0
     total_count = 0
     acc = 0
-    _pred_classes = dict() 
+    _pred_classes = dict()
     _labels = dict()
     datasets = []
     if train_dataloader is not None:
@@ -85,5 +85,10 @@ def valid_one_epoch(model, loss_fn, train_dataloader, valid_dataloader, device):
                             loss=torch.mean(torch.Tensor(loss_values)).item(),
                         )
                     )
-    
-    return acc, torch.mean(torch.Tensor(loss_values)).item(), _pred_classes, _labels
+
+    return (
+        acc,
+        torch.mean(torch.Tensor(loss_values)).item(),
+        _pred_classes,
+        _labels,
+    )

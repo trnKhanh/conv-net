@@ -44,11 +44,15 @@ class Net(nn.Module):
                 ResBlock(in_channels, 64, 3, 1),
                 nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(64, 64, 3, 1),
+                ResBlock(64, 64, 3, 1),
+                ResBlock(64, 64, 3, 1),
                 ResBlock(64, 128, 3, 1),
                 nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(128, 128, 3, 1),
-                ResBlock(128, 256, 3, 2),
+                ResBlock(128, 128, 3, 1),
+                ResBlock(128, 256, 3, 1),
                 nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
+                ResBlock(256, 256, 3, 1),
                 ResBlock(256, 256, 3, 1),
             ]
         )

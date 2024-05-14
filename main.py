@@ -35,6 +35,7 @@ def create_args():
     parser.add_argument("--batch-size", default=64, type=int)
     parser.add_argument("--learning-rate", default=0.001, type=float)
     parser.add_argument("--fig-dir", default="", type=str)
+    parser.add_argument("--patience", default=10, type=int)
 
     # Checkpoints
     parser.add_argument("--save-path", default="", type=str)
@@ -82,7 +83,6 @@ def main(args):
 
     loss_fn = nn.CrossEntropyLoss()
     if args.train:
-        print(model)
         train_loss_values = []
         valid_loss_values = []
         optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
@@ -93,6 +93,7 @@ def main(args):
         if len(args.fig_dir) > 0:
             os.makedirs(args.fig_dir, exist_ok=True)
         min_loss = math.inf
+        not_better = 0
         # Loop and train for n epochs
         for e in range(1, args.epochs + 1):
             # Train and update model's parameters
@@ -110,7 +111,15 @@ def main(args):
             if len(args.save_best_path) > 0 and valid_loss < min_loss:
                 torch.save(model.state_dict(), args.save_best_path)
                 print(f"Saved model to {args.save_best_path}")
+            if min_loss <= valid_loss:
+                not_better += 1
+            else:
+                not_better = 0
+
             min_loss = min(min_loss, valid_loss)
+            if not_better == args.patience:
+                print(f"Stopping because of exceeding patience")
+                break
 
             # Save every freq (default: 5) epochs
             if len(args.save_path) > 0 and (

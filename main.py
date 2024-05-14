@@ -147,6 +147,7 @@ def main(args):
             model, loss_fn, train_dataloader, valid_dataloader, device
         )
         if len(args.eval_log_dir) > 0:
+            os.makedirs(os.path.dirname(args.eval_log_dir), exist_ok=True)
             with open(args.eval_log_dir, "w") as f:
                 json.dump({"preds": preds, "labels": labels}, f)
 

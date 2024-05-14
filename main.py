@@ -76,7 +76,8 @@ def main(args):
     print("=" * os.get_terminal_size().columns)
     model.to(device)
     if len(args.load_ckpt):
-        model = torch.load(args.load_ckpt, map_location=device)
+        state_dict = torch.load(args.load_ckpt, map_location=device)
+        model.load_state_dict(state_dict)
         print(f"Loaded model from {args.load_ckpt}")
 
     loss_fn = nn.CrossEntropyLoss()
@@ -107,7 +108,7 @@ def main(args):
 
             # Save best checkpoint based on loss value
             if len(args.save_best_path) > 0 and valid_loss < min_loss:
-                torch.save(model, args.save_best_path)
+                torch.save(model.state_dict(), args.save_best_path)
                 print(f"Saved model to {args.save_best_path}")
             min_loss = min(min_loss, valid_loss)
 
@@ -115,7 +116,7 @@ def main(args):
             if len(args.save_path) > 0 and (
                 e % args.save_freq == 0 or e == args.epochs
             ):
-                torch.save(model, args.save_path)
+                torch.save(model.state_dict(), args.save_path)
                 print(f"Saved model to {args.save_path}")
         # The following lines of code used for visualizing loss during training
         if len(args.fig_dir) > 0:

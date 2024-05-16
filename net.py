@@ -9,14 +9,21 @@ class ResBlock(nn.Module):
         kernel_size,
         stride,
         residual=True,
+        act_layer=nn.ReLU,
     ):
         super().__init__()
         padding = kernel_size // 2
-        self.conv = nn.Conv2d(
+        self.conv1 = nn.Conv2d(
             in_channels,
             out_channels,
             kernel_size=kernel_size,
             stride=stride,
+            padding=padding,
+        )
+        self.conv2 = nn.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
             padding=padding,
         )
         if not residual:
@@ -26,12 +33,14 @@ class ResBlock(nn.Module):
         else:
             self.res = nn.Conv2d(in_channels, out_channels, 1, stride=stride)
 
-        self.norm = nn.BatchNorm2d(out_channels)
+        self.norm1 = nn.BatchNorm2d(out_channels)
+        self.norm2 = nn.BatchNorm2d(out_channels)
+        self.act = act_layer()
 
     def forward(self, x):
         res = self.res(x)
-
-        x = self.norm(self.conv(x)) + res
+        x = self.act(self.norm1(self.conv1(x)))
+        x = self.norm2(self.conv2(x)) + res
 
         return x
 
@@ -41,18 +50,14 @@ class Net(nn.Module):
         super().__init__()
         self.blocks = nn.ModuleList(
             [
-                ResBlock(in_channels, 64, 3, 1),
-                nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
+                ResBlock(in_channels, 64, 7, 2),
+                # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(64, 64, 3, 1),
                 ResBlock(64, 64, 3, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 128, 3, 1),
-                nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(128, 128, 3, 1),
-                ResBlock(128, 128, 3, 1),
-                ResBlock(128, 256, 3, 1),
-                nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(256, 256, 3, 1),
+                ResBlock(64, 128, 5, 2),
+                # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
+                ResBlock(128, 256, 3, 2),
+                # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(256, 256, 3, 1),
             ]
         )

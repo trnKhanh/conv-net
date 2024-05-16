@@ -50,20 +50,27 @@ class Net(nn.Module):
         super().__init__()
         self.blocks = nn.ModuleList(
             [
-                ResBlock(in_channels, 64, 7, 2),
+                nn.Conv2d(in_channels, 64, 7, 2),
+                nn.BatchNorm2d(64),
+                nn.ReLU(),
+                nn.MaxPool2d(3, 2, 1),
+                ResBlock(64, 64, 3, 2),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(64, 64, 3, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 128, 5, 2),
+                ResBlock(64, 128, 3, 2),
+                ResBlock(128, 128, 3, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(128, 256, 3, 2),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
                 ResBlock(256, 256, 3, 1),
+                ResBlock(256, 512, 3, 2),
+                ResBlock(512, 512, 3, 1),
             ]
         )
+
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.head = nn.Linear(
-            256,
+            512,
             num_classes,
         )
         self.act = nn.ReLU()

@@ -129,7 +129,7 @@ def main(args):
                 print(f"Saved model to {args.save_path}")
         # The following lines of code used for visualizing loss during training
         if len(args.fig_dir) > 0:
-            x = np.arange(1, args.epochs + 1, dtype=np.int32)
+            x = np.arange(1, len(train_loss_values) + 1, dtype=np.int32)
             plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             plt.plot(
                 x,

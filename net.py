@@ -60,9 +60,8 @@ class ResBlock(nn.Module):
 class Net(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
-        max_pool_kernel_size = 3
-        max_pool_padding = 1
-        kernel_size = 3
+        max_pool_kernel_size = 5
+        max_pool_padding = 2
         self.blocks = nn.ModuleList(
             [
                 nn.Sequential(
@@ -73,21 +72,21 @@ class Net(nn.Module):
                     nn.ReLU(),
                 ),
                 nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
-                ResBlock(64, 64, kernel_size, 1),
+                ResBlock(64, 64, 5, 1),
                 nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
-                ResBlock(64, 64, kernel_size, 1),
+                ResBlock(64, 64, 5, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(64, 128, kernel_size, 1),
+                ResBlock(64, 128, 5, 1),
                 nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
-                ResBlock(128, 128, kernel_size, 1),
+                ResBlock(128, 128, 3, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(128, 256, kernel_size, 1),
+                ResBlock(128, 256, 3, 1),
                 nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
-                ResBlock(256, 256, kernel_size, 1),
+                ResBlock(256, 256, 3, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(256, 512, kernel_size, 1),
+                ResBlock(256, 512, 3, 1),
                 nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
-                ResBlock(512, 512, kernel_size, 1),
+                ResBlock(512, 512, 3, 1),
             ]
         )
 

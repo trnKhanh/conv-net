@@ -2,12 +2,13 @@ import os
 from typing import Optional, Callable
 
 import torch
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, random_split, Subset
 
 import torchvision
 from torchvision import transforms
 
 from skimage.feature import hog
+from sklearn.model_selection import train_test_split
 from PIL import Image
 
 
@@ -53,7 +54,15 @@ def get_dataset(name):
         dataset = torchvision.datasets.Caltech101(
             "data", transform=transform, download=True
         )
-        train_dataset, valid_dataset = random_split(dataset, [0.8, 0.2])
+        train_indices, valid_indices = train_test_split(
+            list(range(len(dataset))),
+            train_size=0.8,
+            test_size=0.2,
+            stratify=dataset.y,
+        )
+        train_dataset = Subset(dataset, train_indices)
+        valid_dataset = Subset(dataset, valid_indices)
+
         return 101, train_dataset, valid_dataset
     elif name == "Caltech256":
         transform = transforms.Compose(
@@ -66,7 +75,14 @@ def get_dataset(name):
         dataset = torchvision.datasets.Caltech256(
             "data", transform=transform, download=True
         )
-        train_dataset, valid_dataset = random_split(dataset, [0.8, 0.2])
+        train_indices, valid_indices = train_test_split(
+            list(range(len(dataset))),
+            train_size=0.8,
+            test_size=0.2,
+            stratify=dataset.y,
+        )
+        train_dataset = Subset(dataset, train_indices)
+        valid_dataset = Subset(dataset, valid_indices)
         return 257, train_dataset, valid_dataset
     else:
         raise ValueError(f"Dataset {name} does not exist")

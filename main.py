@@ -146,6 +146,9 @@ def main(args):
             min_loss = min(min_loss, valid_loss)
             if not_better == args.patience:
                 print(f"Stopping because of exceeding patience")
+                if len(args.save_path) > 0:
+                    torch.save(model.state_dict(), args.save_path)
+                    print(f"Saved model to {args.save_path}")
                 break
 
             # Save every freq (default: 5) epochs

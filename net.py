@@ -8,24 +8,37 @@ class ResBlock(nn.Module):
         out_channels,
         kernel_size,
         stride,
+        depth=2,
         residual=True,
         act_layer=nn.ReLU,
     ):
         super().__init__()
         padding = kernel_size // 2
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
+        self.convs = nn.ModuleList()
+        self.convs.append(
+            nn.Sequential(
+                nn.Conv2d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                ),
+                nn.BatchNorm2d(out_channels),
+            )
         )
-        self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=kernel_size,
-            padding=padding,
-        )
+        for _ in range(depth):
+            self.convs.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        out_channels,
+                        out_channels,
+                        kernel_size=kernel_size,
+                        padding=padding,
+                    ),
+                    nn.BatchNorm2d(out_channels),
+                )
+            )
         if not residual:
             self.res = lambda x: 0
         elif in_channels == out_channels and stride == 1:
@@ -33,38 +46,48 @@ class ResBlock(nn.Module):
         else:
             self.res = nn.Conv2d(in_channels, out_channels, 1, stride=stride)
 
-        self.norm1 = nn.BatchNorm2d(out_channels)
-        self.norm2 = nn.BatchNorm2d(out_channels)
         self.act = act_layer()
 
     def forward(self, x):
         res = self.res(x)
-        x = self.act(self.norm1(self.conv1(x)))
-        x = self.norm2(self.conv2(x)) + res
+        for conv in self.convs:
+            x = self.act(conv(x))
 
+        x = x + res
         return x
 
 
 class Net(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
+        max_pool_kernel_size = 3
+        max_pool_padding = 1
+        kernel_size = 3
         self.blocks = nn.ModuleList(
             [
-                nn.Conv2d(in_channels, 64, 7, 2),
-                nn.BatchNorm2d(64),
-                nn.ReLU(),
-                nn.MaxPool2d(3, 2, 1),
-                ResBlock(64, 64, 3, 2),
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_channels, 64, kernel_size=11, padding=5, stride=1
+                    ),
+                    nn.BatchNorm2d(64),
+                    nn.ReLU(),
+                ),
+                nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
+                ResBlock(64, 64, kernel_size, 1),
+                nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
+                ResBlock(64, 64, kernel_size, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 128, 3, 2),
-                ResBlock(128, 128, 3, 1),
+                ResBlock(64, 128, kernel_size, 1),
+                nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
+                ResBlock(128, 128, kernel_size, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(128, 256, 3, 2),
+                ResBlock(128, 256, kernel_size, 1),
+                nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
+                ResBlock(256, 256, kernel_size, 1),
                 # nn.MaxPool2d(kernel_size=3, padding=1, stride=2),
-                ResBlock(256, 256, 3, 1),
-                ResBlock(256, 512, 3, 2),
-                ResBlock(512, 512, 3, 1),
+                ResBlock(256, 512, kernel_size, 1),
+                nn.MaxPool2d(max_pool_kernel_size, 2, max_pool_padding),
+                ResBlock(512, 512, kernel_size, 1),
             ]
         )
 
@@ -78,6 +101,7 @@ class Net(nn.Module):
     def forward(self, x):
         for blk in self.blocks:
             x = self.act(blk(x))
+
         x = self.avg_pool(x).squeeze(dim=(2, 3))
 
         x = self.head(x)

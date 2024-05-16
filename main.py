@@ -8,6 +8,7 @@ import numpy as np
 
 import torch
 import torchvision
+from torchvision import transforms
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -65,6 +66,21 @@ def main(args):
         shuffle=False,
         drop_last=False,
     )
+    image_transforms = {
+        "train": transforms.Compose(
+            [
+                transforms.Resize(256),
+                transforms.RandomCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(20),
+            ]
+        ),
+        "valid": transforms.Compose(
+            [
+                transforms.Resize(224),
+            ]
+        ),
+    }
 
     device = torch.device(args.device)
 
@@ -98,11 +114,22 @@ def main(args):
         for e in range(1, args.epochs + 1):
             # Train and update model's parameters
             train_loss = train_one_epoch(
-                e, model, optimizer, loss_fn, train_dataloader, device
+                e,
+                model,
+                optimizer,
+                loss_fn,
+                train_dataloader,
+                device,
+                transform=image_transforms["train"],
             )
             # Validating model using test set
             acc, valid_loss, _, _ = valid_one_epoch(
-                model, loss_fn, None, valid_dataloader, device
+                model,
+                loss_fn,
+                None,
+                valid_dataloader,
+                device,
+                transform=image_transforms["valid"],
             )
             train_loss_values.append(train_loss)
             valid_loss_values.append(valid_loss)
@@ -154,7 +181,12 @@ def main(args):
             )
     else:
         acc, loss, preds, labels = valid_one_epoch(
-            model, loss_fn, train_dataloader, valid_dataloader, device
+            model,
+            loss_fn,
+            train_dataloader,
+            valid_dataloader,
+            device,
+            transform=image_transforms["valid"],
         )
         if len(args.eval_log_dir) > 0:
             os.makedirs(os.path.dirname(args.eval_log_dir), exist_ok=True)

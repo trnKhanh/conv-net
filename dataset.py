@@ -45,7 +45,7 @@ def get_dataset(name):
     elif name == "Caltech101":
         transform = transforms.Compose(
             [
-                transforms.Resize((224, 224)),
+                transforms.Resize((256, 256)),
                 GrayToRGB(),
                 transforms.ToTensor(),
             ]
@@ -58,7 +58,7 @@ def get_dataset(name):
     elif name == "Caltech256":
         transform = transforms.Compose(
             [
-                transforms.Resize((224, 224)),
+                transforms.Resize((256, 256)),
                 GrayToRGB(),
                 transforms.ToTensor(),
             ]

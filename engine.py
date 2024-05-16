@@ -3,8 +3,13 @@ from tqdm import tqdm
 import torch
 import numpy as np
 
+from torchvision import transforms
+from PIL import Image
 
-def train_one_epoch(epoch, model, optimizer, loss_fn, dataloader, device):
+
+def train_one_epoch(
+    epoch, model, optimizer, loss_fn, dataloader, device, transform=None
+):
     model.train()
     correct_count = 0
     total_count = 0
@@ -12,6 +17,8 @@ def train_one_epoch(epoch, model, optimizer, loss_fn, dataloader, device):
     with tqdm(dataloader, unit="batch", ncols=0) as tepoch:
         tepoch.set_description(f"Epoch {epoch}")
         for samples, labels in tepoch:
+            if transform is not None:
+                samples = transform(samples)
             # Move tensor to device used to train
             samples = samples.to(device)
             labels = labels.to(device)
@@ -41,7 +48,9 @@ def train_one_epoch(epoch, model, optimizer, loss_fn, dataloader, device):
     return torch.mean(torch.Tensor(loss_values)).item()
 
 
-def valid_one_epoch(model, loss_fn, train_dataloader, valid_dataloader, device):
+def valid_one_epoch(
+    model, loss_fn, train_dataloader, valid_dataloader, device, transform=None
+):
     model.eval()
     loss_values = []
     correct_count = 0
@@ -61,7 +70,8 @@ def valid_one_epoch(model, loss_fn, train_dataloader, valid_dataloader, device):
             tepoch.set_description(f"{name} validation")
             with torch.no_grad():
                 for samples, labels in tepoch:
-                    # Move tensor to device used to train
+                    if transform is not None:
+                        samples = transform(samples)
                     samples = samples.to(device)
                     labels = labels.to(device)
                     preds = model(samples)

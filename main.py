@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 
 from net import Net
 from dataset import get_dataset
+from optim import CosineSchedule
 from engine import train_one_epoch, valid_one_epoch
 
 from PIL import Image
@@ -34,7 +35,10 @@ def create_args():
     # Training
     parser.add_argument("--epochs", default=100, type=int)
     parser.add_argument("--batch-size", default=64, type=int)
-    parser.add_argument("--learning-rate", default=0.001, type=float)
+    parser.add_argument("--base-lr", default=0.005, type=float)
+    parser.add_argument("--target-lr", default=0.00001, type=float)
+    parser.add_argument("--warmup-epochs", default=5, type=int)
+    parser.add_argument("--max-epochs", default=70, type=int)
     parser.add_argument("--fig-dir", default="", type=str)
     parser.add_argument("--patience", default=10, type=int)
 
@@ -69,10 +73,8 @@ def main(args):
     image_transforms = {
         "train": transforms.Compose(
             [
-                transforms.Resize(256),
                 transforms.RandomCrop(224),
                 transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(20),
             ]
         ),
         "valid": transforms.Compose(
@@ -101,7 +103,16 @@ def main(args):
     if args.train:
         train_loss_values = []
         valid_loss_values = []
-        optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.base_lr)
+
+        scheduler = CosineSchedule(
+            optimizer,
+            base_lr=args.base_lr,
+            target_lr=args.target_lr,
+            max_steps=args.max_epochs,
+            warmup_steps=args.warmup_epochs,
+        )
+
         if len(args.save_path) > 0:
             os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
         if len(args.save_best_path) > 0:
@@ -121,6 +132,7 @@ def main(args):
                 train_dataloader,
                 device,
                 transform=image_transforms["train"],
+                lr_scheduler=scheduler,
             )
             # Validating model using test set
             acc, valid_loss, _, _ = valid_one_epoch(

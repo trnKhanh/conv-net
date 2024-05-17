@@ -8,8 +8,18 @@ from PIL import Image
 
 
 def train_one_epoch(
-    epoch, model, optimizer, loss_fn, dataloader, device, transform=None
+    epoch,
+    model,
+    optimizer,
+    loss_fn,
+    dataloader,
+    device,
+    transform=None,
+    lr_scheduler=None,
 ):
+    if lr_scheduler is not None:
+        lr_scheduler.step()
+
     model.train()
     correct_count = 0
     total_count = 0
@@ -43,8 +53,11 @@ def train_one_epoch(
             loss_values.append(loss_value)
 
             tepoch.set_postfix(
-                dict(acc=acc, loss=torch.mean(torch.Tensor(loss_values)).item())
+                dict(acc=acc, loss=torch.mean(torch.Tensor(loss_values)).item(),
+                     lr=optimizer.param_groups[0]["lr"])
             )
+
+
     return torch.mean(torch.Tensor(loss_values)).item()
 
 

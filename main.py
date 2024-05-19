@@ -104,11 +104,9 @@ def main(args):
     if args.train:
         train_loss_values = []
         valid_loss_values = []
-        optimizer = torch.optim.SGD(
+        optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=args.base_lr,
-            momentum=0.9,
-            weight_decay=args.weight_decay,
         )
 
         scheduler = CosineSchedule(

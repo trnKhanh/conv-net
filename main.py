@@ -41,7 +41,7 @@ def create_args():
     parser.add_argument("--max-epochs", default=70, type=int)
     parser.add_argument("--fig-dir", default="", type=str)
     parser.add_argument("--patience", default=10, type=int)
-    parser.add_argument("--weight-decay", default=0.001, type=int)
+    parser.add_argument("--weight-decay", default=0.001, type=float)
 
     # Checkpoints
     parser.add_argument("--save-path", default="", type=str)

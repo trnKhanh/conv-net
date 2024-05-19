@@ -11,6 +11,7 @@ class ResBlock(nn.Module):
         depth=3,
         residual=True,
         act_layer=nn.ReLU,
+        dropout_rate: float = 0.2,
     ):
         super().__init__()
         padding = kernel_size // 2
@@ -47,11 +48,14 @@ class ResBlock(nn.Module):
             self.res = nn.Conv2d(in_channels, out_channels, 1, stride=stride)
 
         self.act = act_layer()
+        self.drop = (
+            nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity()
+        )
 
     def forward(self, x):
         res = self.res(x)
         for conv in self.convs:
-            x = self.act(conv(x))
+            x = self.drop(self.act(conv(x)))
 
         x = x + res
         return x
@@ -64,20 +68,20 @@ class Net(nn.Module):
             [
                 nn.Sequential(
                     nn.Conv2d(
-                        in_channels, 64, kernel_size=11, padding=5, stride=1
+                        in_channels, 64, kernel_size=15, padding=7, stride=1
                     ),
                     nn.BatchNorm2d(64),
                     nn.ReLU(),
                 ),
                 nn.MaxPool2d(7, 2, 3),
-                ResBlock(64, 64, 3, 1),
-                nn.MaxPool2d(3, 2, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 64, 3, 1),
-                ResBlock(64, 128, 3, 1),
-                nn.MaxPool2d(3, 2, 1),
+                ResBlock(64, 64, 5, 1),
+                nn.MaxPool2d(5, 2, 1),
+                ResBlock(64, 64, 5, 1),
+                ResBlock(64, 64, 5, 1),
+                ResBlock(64, 64, 5, 1),
+                ResBlock(64, 64, 5, 1),
+                ResBlock(64, 128, 5, 1),
+                nn.MaxPool2d(5, 2, 1),
                 ResBlock(128, 128, 3, 1),
                 ResBlock(128, 128, 3, 1),
                 ResBlock(128, 128, 3, 1),

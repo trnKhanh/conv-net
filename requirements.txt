@@ -6,3 +6,4 @@ gdown
 matplotlib
 scikit-learn
 scikit-image
+pyyaml

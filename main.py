@@ -11,6 +11,7 @@ import torchvision
 from torchvision import transforms
 from torch import nn
 from torch.utils.data import DataLoader
+from torchsummary import summary
 
 from net import Net
 from dataset import get_dataset
@@ -18,6 +19,7 @@ from optim import CosineSchedule
 from engine import train_one_epoch, valid_one_epoch
 
 from PIL import Image
+import yaml
 
 
 def create_args():
@@ -25,6 +27,23 @@ def create_args():
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--device", default="cpu", type=str)
     parser.add_argument("--eval-log-dir", default="", type=str)
+    # Model
+    parser.add_argument(
+        "--model",
+        required=True,
+        type=str,
+        help="Path to model config file",
+    )
+    parser.add_argument(
+        "--mlp-dropout-rate",
+        default=0,
+        type=int,
+    )
+    parser.add_argument(
+        "--conv-dropout-rate",
+        default=0,
+        type=int,
+    )
     # Dataset
     parser.add_argument("--hog", action="store_true")
     parser.add_argument(
@@ -88,11 +107,24 @@ def main(args):
     device = torch.device(args.device)
 
     # Build neural network using arguments passed by user
-    model = Net(3, num_classes)
+    with open(args.model, "r") as f:
+        model_config = yaml.safe_load(f)
+        net_configs = [_ for _ in range(len(model_config["model"]["net"]))]
+        for k, v in model_config["model"]["net"].items():
+            net_configs[k] = v
+
+        mlp_configs = model_config["model"]["mlp"]
+    model = Net(
+        3,
+        num_classes,
+        net_configs,
+        mlp_configs,
+        args.mlp_dropout_rate,
+        args.conv_dropout_rate,
+        model_config["model"]["max_pool_stride"],
+    )
     print("=" * os.get_terminal_size().columns)
-    print(model)
-    params = sum([p.numel() for p in model.parameters()])
-    print(f"Parameters: {params}")
+    summary(model, (3, 224, 224))
     print("=" * os.get_terminal_size().columns)
     model.to(device)
     if len(args.load_ckpt):

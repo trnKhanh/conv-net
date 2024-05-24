@@ -125,6 +125,13 @@ def main(args):
         net_configs = [_ for _ in range(len(model_config["model"]["net"]))]
         for k, v in model_config["model"]["net"].items():
             net_configs[k] = v
+            
+        if "init_down" in model_config["model"]:
+            init_down = [_ for _ in range(len(model_config["model"]["init_down"]))]
+            for k, v in model_config["model"]["init_down"].items():
+                init_down[k] = v
+        else:
+            init_down = None
 
         mlp_configs = model_config["model"]["mlp"]
 
@@ -137,6 +144,7 @@ def main(args):
         args.mlp_dropout_rate,
         args.conv_dropout_rate,
         model_config["model"]["max_pool_stride"],
+        init_down=init_down,
     )
     model.to(device)
     print("=" * os.get_terminal_size().columns)

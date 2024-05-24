@@ -134,6 +134,7 @@ class Net(nn.Module):
         mlp_dropout_rate: float = 0,
         conv_dropout_rate: float = 0,
         max_pool_stride: int = 1,
+        init_down=None,
     ):
         super().__init__()
         self.blocks = nn.ModuleList()
@@ -142,8 +143,38 @@ class Net(nn.Module):
             if mlp_dropout_rate > 0
             else nn.Identity()
         )
+        last_channels = in_channels
+        if init_down is not None:
+            for i, cf in enumerate(init_down):
+                down_type = cf[0]
+                if down_type == "conv":
+                    conv_in_channels = last_channels
+                    conv_out_channels = cf[1]
+                    kernel_size = cf[2]
+                    stride = cf[3]
+                    self.blocks.append(
+                        nn.Sequential(
+                            nn.Conv2d(
+                                conv_in_channels,
+                                conv_out_channels,
+                                kernel_size,
+                                stride,
+                                padding=kernel_size // 2,
+                            ),
+                            nn.BatchNorm2d(conv_out_channels),
+                        )
+                    )
+                    last_channels = conv_out_channels
+
+                elif down_type == "max":
+                    kernel_size = cf[1]
+                    stride = cf[2]
+                    self.blocks.append(
+                        nn.MaxPool2d(kernel_size, stride, kernel_size // 2)
+                    )
+
         for i, cf in enumerate(net_configs):
-            block_in_channels = net_configs[i - 1][0] if i > 0 else in_channels
+            block_in_channels = last_channels
             block_out_channels = cf[0]
             kernel_size = cf[1]
             stride = cf[2]
@@ -170,14 +201,13 @@ class Net(nn.Module):
                         kernel_size, max_pool_stride, kernel_size // 2
                     ),
                 )
+            last_channels = block_out_channels
 
         self.post_conv = nn.AdaptiveAvgPool2d((1, 1))
         self.mlp = nn.ModuleList()
 
         for i, channels in enumerate(mlp_configs):
-            linear_in_channels = (
-                net_configs[-1][0] if i == 0 else mlp_configs[i - 1]
-            )
+            linear_in_channels = last_channels
             linear_out_channels = channels
 
             self.mlp.append(
@@ -186,6 +216,7 @@ class Net(nn.Module):
                     nn.BatchNorm1d(linear_out_channels),
                 )
             )
+            last_channels = linear_out_channels
 
         self.head = nn.Linear(
             mlp_configs[-1] if len(mlp_configs) > 0 else net_configs[-1][0],

@@ -128,6 +128,7 @@ def main(args):
 
         mlp_configs = model_config["model"]["mlp"]
 
+    print(args.device)
     model = Net(
         3,
         num_classes,
@@ -137,10 +138,10 @@ def main(args):
         args.conv_dropout_rate,
         model_config["model"]["max_pool_stride"],
     )
-    print("=" * os.get_terminal_size().columns)
-    summary(model, (3, 224, 224))
-    print("=" * os.get_terminal_size().columns)
     model.to(device)
+    print("=" * os.get_terminal_size().columns)
+    summary(model, (3, 224, 224), args.batch_size, args.device)
+    print("=" * os.get_terminal_size().columns)
     if len(args.load_ckpt):
         state_dict = torch.load(args.load_ckpt, map_location=device)
         if "model" in state_dict:

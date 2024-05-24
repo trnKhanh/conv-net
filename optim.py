@@ -30,9 +30,24 @@ class CosineSchedule(object):
             )
         else:
             return self.target_lr
-    
+
     def step(self):
         self.cur_step += 1
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = self.__call__(self.cur_step)
 
+    def state_dict(self):
+        return {
+            "cur_step": self.cur_step,
+            "base_lr": self.base_lr,
+            "target_lr": self.target_lr,
+            "warmup_steps": self.warmup_steps,
+            "max_steps": self.max_steps,
+        }
+
+    def load_state_dict(self, state_dict):
+        self.cur_step = state_dict["cur_step"]
+        self.base_lr = state_dict["base_lr"]
+        self.target_lr = state_dict["target_lr"]
+        self.warmup_steps = state_dict["warmup_steps"]
+        self.max_steps = state_dict["max_steps"]

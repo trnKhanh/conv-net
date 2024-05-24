@@ -17,6 +17,7 @@ from net import Net
 from dataset import get_dataset
 from optim import CosineSchedule
 from engine import train_one_epoch, valid_one_epoch
+from utils import load_checkpoint, save_checkpoint
 
 from PIL import Image
 import yaml
@@ -25,6 +26,7 @@ import yaml
 def create_args():
     parser = ArgumentParser()
     parser.add_argument("--train", action="store_true")
+    parser.add_argument("--valid", action="store_true")
     parser.add_argument("--device", default="cpu", type=str)
     parser.add_argument("--eval-log-dir", default="", type=str)
     # Model
@@ -50,10 +52,12 @@ def create_args():
         "--dataset",
         choices=["MNIST", "FashionMNIST", "Caltech101", "Caltech256"],
     )
+    parser.add_argument("--num-workers", default=0, type=int)
 
     # Training
     parser.add_argument("--epochs", default=100, type=int)
-    parser.add_argument("--batch-size", default=64, type=int)
+    parser.add_argument("--start-epochs", default=1, type=int)
+    parser.add_argument("--batch-size", default=16, type=int)
     parser.add_argument("--base-lr", default=0.005, type=float)
     parser.add_argument("--target-lr", default=0.00001, type=float)
     parser.add_argument("--warmup-epochs", default=5, type=int)
@@ -66,8 +70,10 @@ def create_args():
     parser.add_argument("--save-path", default="", type=str)
     parser.add_argument("--save-freq", default=5, type=int)
     parser.add_argument("--save-best-path", default="", type=str)
+    parser.add_argument("--save-best-acc-path", default="", type=str)
 
     parser.add_argument("--load-ckpt", default="", type=str)
+    parser.add_argument("--resume", default="", type=str)
 
     return parser.parse_args()
 
@@ -82,13 +88,20 @@ def main(args):
     print("=" * os.get_terminal_size().columns)
 
     train_dataloader = DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        drop_last=True,
+        num_workers=args.num_workers,
+        pin_memory=True,
     )
     valid_dataloader = DataLoader(
         valid_dataset,
         batch_size=args.batch_size,
         shuffle=False,
         drop_last=False,
+        num_workers=args.num_workers,
+        pin_memory=True,
     )
     image_transforms = {
         "train": transforms.Compose(
@@ -114,6 +127,7 @@ def main(args):
             net_configs[k] = v
 
         mlp_configs = model_config["model"]["mlp"]
+
     model = Net(
         3,
         num_classes,
@@ -129,7 +143,10 @@ def main(args):
     model.to(device)
     if len(args.load_ckpt):
         state_dict = torch.load(args.load_ckpt, map_location=device)
-        model.load_state_dict(state_dict)
+        if "model" in state_dict:
+            model.load_state_dict(state_dict["model"])
+        else:
+            model.load_state_dict(state_dict)
         print(f"Loaded model from {args.load_ckpt}")
 
     loss_fn = nn.CrossEntropyLoss()
@@ -148,6 +165,10 @@ def main(args):
             max_steps=args.max_epochs,
             warmup_steps=args.warmup_epochs,
         )
+        if len(args.resume):
+            args.start_epochs = load_checkpoint(
+                args.resume, model, optimizer, scheduler, args.device
+            )
 
         if len(args.save_path) > 0:
             os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
@@ -156,9 +177,10 @@ def main(args):
         if len(args.fig_dir) > 0:
             os.makedirs(args.fig_dir, exist_ok=True)
         min_loss = math.inf
+        max_acc = -math.inf
         not_better = 0
         # Loop and train for n epochs
-        for e in range(1, args.epochs + 1):
+        for e in range(args.start_epochs, args.epochs + 1):
             # Train and update model's parameters
             train_loss = train_one_epoch(
                 e,
@@ -184,27 +206,52 @@ def main(args):
 
             # Save best checkpoint based on loss value
             if len(args.save_best_path) > 0 and valid_loss < min_loss:
-                torch.save(model.state_dict(), args.save_best_path)
-                print(f"Saved model to {args.save_best_path}")
-            if min_loss <= valid_loss:
+                save_checkpoint(
+                    args.save_best_path,
+                    e,
+                    model,
+                    optimizer,
+                    scheduler,
+                )
+            if len(args.save_best_acc_path) > 0 and acc > max_acc:
+                save_checkpoint(
+                    args.save_best_acc_path,
+                    e,
+                    model,
+                    optimizer,
+                    scheduler,
+                )
+            if min_loss <= valid_loss and max_acc >= acc:
                 not_better += 1
             else:
                 not_better = 0
 
             min_loss = min(min_loss, valid_loss)
+            max_acc = max(max_acc, acc)
+
             if not_better == args.patience:
                 print(f"Stopping because of exceeding patience")
                 if len(args.save_path) > 0:
-                    torch.save(model.state_dict(), args.save_path)
-                    print(f"Saved model to {args.save_path}")
+                    save_checkpoint(
+                        args.save_path,
+                        e,
+                        model,
+                        optimizer,
+                        scheduler,
+                    )
                 break
 
             # Save every freq (default: 5) epochs
             if len(args.save_path) > 0 and (
                 e % args.save_freq == 0 or e == args.epochs
             ):
-                torch.save(model.state_dict(), args.save_path)
-                print(f"Saved model to {args.save_path}")
+                save_checkpoint(
+                    args.save_path,
+                    e,
+                    model,
+                    optimizer,
+                    scheduler,
+                )
         # The following lines of code used for visualizing loss during training
         if len(args.fig_dir) > 0:
             x = np.arange(1, len(train_loss_values) + 1, dtype=np.int32)
@@ -230,7 +277,7 @@ def main(args):
                 + args.save_path.split("/")[-1].split(".")[-2]
                 + ".pdf"
             )
-    else:
+    if args.valid:
         acc, loss, preds, labels = valid_one_epoch(
             model,
             loss_fn,

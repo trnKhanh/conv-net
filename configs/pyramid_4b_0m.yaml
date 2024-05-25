@@ -1,4 +1,6 @@
 model:
+  init_down:
+    0: ["conv", 64, 15, 2]
   # out_channels, kernel_size, stride, res_depth, groups, depth 
   net:
     0: [64, 3, 1, 1, 1, 4]

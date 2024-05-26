@@ -135,7 +135,6 @@ def main(args):
 
         mlp_configs = model_config["model"]["mlp"]
 
-    print(args.device)
     model = Net(
         3,
         num_classes,
@@ -147,9 +146,6 @@ def main(args):
         init_down=init_down,
     )
     model.to(device)
-    print("=" * os.get_terminal_size().columns)
-    summary(model, (3, 224, 224), args.batch_size, args.device)
-    print("=" * os.get_terminal_size().columns)
     if len(args.load_ckpt):
         state_dict = torch.load(args.load_ckpt, map_location=device)
         if "model" in state_dict:
@@ -160,6 +156,9 @@ def main(args):
 
     loss_fn = nn.CrossEntropyLoss()
     if args.train:
+        print("=" * os.get_terminal_size().columns)
+        summary(model, (3, 224, 224), args.batch_size, args.device)
+        print("=" * os.get_terminal_size().columns)
         train_loss_values = []
         valid_loss_values = []
         optimizer = torch.optim.AdamW(

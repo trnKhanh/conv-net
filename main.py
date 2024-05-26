@@ -47,6 +47,7 @@ def create_args():
         type=int,
     )
     # Dataset
+    parser.add_argument("--split-path", default="", type=str)
     parser.add_argument("--hog", action="store_true")
     parser.add_argument(
         "--dataset",
@@ -80,7 +81,7 @@ def create_args():
 
 def main(args):
     # Build dataset based on arguments specified by user
-    num_classes, train_dataset, valid_dataset = get_dataset(args.dataset)
+    num_classes, train_dataset, valid_dataset = get_dataset(args.dataset, args.split_path)
 
     print("=" * os.get_terminal_size().columns)
     print(f"Train: {len(train_dataset)} samples")

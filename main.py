@@ -88,6 +88,7 @@ def main(args):
     print("=" * os.get_terminal_size().columns)
     print(f"Train: {len(train_dataset)} samples")
     print(f"Validation: {len(valid_dataset)} samples")
+    print(f"Total: {len(valid_dataset) + len(train_dataset)} samples")
     print("=" * os.get_terminal_size().columns)
 
     train_dataloader = DataLoader(

@@ -81,7 +81,9 @@ def create_args():
 
 def main(args):
     # Build dataset based on arguments specified by user
-    num_classes, train_dataset, valid_dataset = get_dataset(args.dataset, args.split_path)
+    num_classes, train_dataset, valid_dataset = get_dataset(
+        args.dataset, args.split_path
+    )
 
     print("=" * os.get_terminal_size().columns)
     print(f"Train: {len(train_dataset)} samples")
@@ -126,9 +128,11 @@ def main(args):
         net_configs = [_ for _ in range(len(model_config["model"]["net"]))]
         for k, v in model_config["model"]["net"].items():
             net_configs[k] = v
-            
+
         if "init_down" in model_config["model"]:
-            init_down = [_ for _ in range(len(model_config["model"]["init_down"]))]
+            init_down = [
+                _ for _ in range(len(model_config["model"]["init_down"]))
+            ]
             for k, v in model_config["model"]["init_down"].items():
                 init_down[k] = v
         else:
@@ -214,7 +218,7 @@ def main(args):
             valid_loss_values.append(valid_loss)
 
             # Save best checkpoint based on loss value
-            if len(args.save_best_path) > 0 and valid_loss < min_loss:
+            if len(args.save_best_path) > 0 and valid_loss["Test"] < min_loss:
                 save_checkpoint(
                     args.save_best_path,
                     e,
@@ -222,7 +226,7 @@ def main(args):
                     optimizer,
                     scheduler,
                 )
-            if len(args.save_best_acc_path) > 0 and acc > max_acc:
+            if len(args.save_best_acc_path) > 0 and acc["Test"] > max_acc:
                 save_checkpoint(
                     args.save_best_acc_path,
                     e,
@@ -230,13 +234,13 @@ def main(args):
                     optimizer,
                     scheduler,
                 )
-            if min_loss <= valid_loss and max_acc >= acc:
+            if min_loss <= valid_loss["Test"] and max_acc >= acc["Test"]:
                 not_better += 1
             else:
                 not_better = 0
 
-            min_loss = min(min_loss, valid_loss)
-            max_acc = max(max_acc, acc)
+            min_loss = min(min_loss, valid_loss["Test"])
+            max_acc = max(max_acc, acc["Test"])
 
             if not_better == args.patience:
                 print(f"Stopping because of exceeding patience")

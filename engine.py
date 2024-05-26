@@ -53,10 +53,12 @@ def train_one_epoch(
             loss_values.append(loss_value)
 
             tepoch.set_postfix(
-                dict(acc=acc, loss=torch.mean(torch.Tensor(loss_values)).item(),
-                     lr=optimizer.param_groups[0]["lr"])
+                dict(
+                    acc=acc,
+                    loss=torch.mean(torch.Tensor(loss_values)).item(),
+                    lr=optimizer.param_groups[0]["lr"],
+                )
             )
-
 
     return torch.mean(torch.Tensor(loss_values)).item()
 
@@ -65,10 +67,12 @@ def valid_one_epoch(
     model, loss_fn, train_dataloader, valid_dataloader, device, transform=None
 ):
     model.eval()
-    loss_values = []
-    correct_count = 0
-    total_count = 0
-    acc = 0
+    loss_values = dict()
+    correct_count = dict()
+    total_count = dict()
+    acc = dict()
+    avg_loss = dict()
+
     _pred_classes = dict()
     _labels = dict()
     datasets = []
@@ -77,6 +81,11 @@ def valid_one_epoch(
     if valid_dataloader is not None:
         datasets.append(("Test", valid_dataloader))
     for name, dataloader in datasets:
+        loss_values[name] = []
+        correct_count[name] = 0
+        total_count[name] = 0
+        acc[name] = 0
+
         _pred_classes[name] = []
         _labels[name] = []
         with tqdm(dataloader, unit="batch", ncols=0) as tepoch:
@@ -96,22 +105,23 @@ def valid_one_epoch(
                     _pred_classes[name].extend(pred_classes.tolist())
                     _labels[name].extend(labels.tolist())
                     correct = torch.sum(pred_classes == labels).item()
-                    correct_count += correct
-                    total_count += len(samples)
-                    acc = correct_count / total_count
+                    correct_count[name] += correct
+                    total_count[name] += len(samples)
+                    acc[name] = correct_count[name] / total_count[name]
 
-                    loss_values.append(loss_value)
+                    loss_values[name].append(loss_value)
 
                     tepoch.set_postfix(
                         dict(
-                            acc=acc,
-                            loss=torch.mean(torch.Tensor(loss_values)).item(),
+                            acc=acc[name],
+                            loss=torch.mean(torch.Tensor(loss_values[name])).item(),
                         )
                     )
+        avg_loss[name] = torch.mean(torch.Tensor(loss_values[name])).item()
 
     return (
         acc,
-        torch.mean(torch.Tensor(loss_values)).item(),
+        avg_loss,
         _pred_classes,
         _labels,
     )

@@ -195,7 +195,7 @@ class Net(nn.Module):
                     i == 0,
                 )
             )
-            if max_pool_stride > 1 and i != len(net_configs):
+            if max_pool_stride > 1 and i + 1 != len(net_configs):
                 self.blocks.append(
                     nn.MaxPool2d(
                         kernel_size, max_pool_stride, kernel_size // 2

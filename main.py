@@ -216,7 +216,7 @@ def main(args):
                 transform=image_transforms["valid"],
             )
             train_loss_values.append(train_loss)
-            valid_loss_values.append(valid_loss)
+            valid_loss_values.append(valid_loss["Test"])
 
             # Save best checkpoint based on loss value
             if len(args.save_best_path) > 0 and valid_loss["Test"] < min_loss:

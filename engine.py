@@ -114,7 +114,9 @@ def valid_one_epoch(
                     tepoch.set_postfix(
                         dict(
                             acc=acc[name],
-                            loss=torch.mean(torch.Tensor(loss_values[name])).item(),
+                            loss=torch.mean(
+                                torch.Tensor(loss_values[name])
+                            ).item(),
                         )
                     )
         avg_loss[name] = torch.mean(torch.Tensor(loss_values[name])).item()

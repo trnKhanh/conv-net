@@ -20,6 +20,8 @@ class ResidualBlock(nn.Module):
         )
         padding = kernel_size // 2
 
+        # If the input and output shapes are different, then 1x1 conv must be
+        # used to transform the input for skip connection
         if not residual:
             self.res = lambda x: 0
         elif in_channels == out_channels and stride == 1:
@@ -31,6 +33,7 @@ class ResidualBlock(nn.Module):
             )
 
         self.convs = nn.ModuleList()
+        # First layer is used for input transformation
         self.convs.append(
             nn.Sequential(
                 nn.Conv2d(
@@ -44,7 +47,7 @@ class ResidualBlock(nn.Module):
                 nn.BatchNorm2d(out_channels),
             )
         )
-
+        # Add layers based on depth
         for _ in range(depth):
             self.convs.append(
                 nn.Sequential(
@@ -103,6 +106,8 @@ class Block(nn.Module):
         )
 
         self.res_blocks = nn.ModuleList()
+        # Add <depth> ResidualBlock
+        # If this is first block, then we do not use skip connection
         for i in range(depth):
             self.res_blocks.append(
                 ResidualBlock(
@@ -143,6 +148,8 @@ class Net(nn.Module):
             if mlp_dropout_rate > 0
             else nn.Identity()
         )
+        # The following lines of code parse the configuration and
+        # create the corresponding architecture
         last_channels = in_channels
         if init_down is not None:
             for i, cf in enumerate(init_down):
@@ -205,6 +212,7 @@ class Net(nn.Module):
 
         self.post_conv = nn.AdaptiveAvgPool2d((1, 1))
         self.mlp = nn.ModuleList()
+        self.last_channels = last_channels
 
         for i, channels in enumerate(mlp_configs):
             linear_in_channels = last_channels
@@ -219,11 +227,31 @@ class Net(nn.Module):
             last_channels = linear_out_channels
 
         self.head = nn.Linear(
-            mlp_configs[-1] if len(mlp_configs) > 0 else net_configs[-1][0],
+            last_channels,
             num_classes,
         )
 
         self.act = nn.ReLU()
+
+    def create_head(self, num_classes: int, mlp_configs):
+        last_channels = self.last_channels
+        self.mlp = nn.ModuleList()
+        for i, channels in enumerate(mlp_configs):
+            linear_in_channels = last_channels
+            linear_out_channels = channels
+
+            self.mlp.append(
+                nn.Sequential(
+                    nn.Linear(linear_in_channels, linear_out_channels),
+                    nn.BatchNorm1d(linear_out_channels),
+                )
+            )
+            last_channels = linear_out_channels
+
+        self.head = nn.Linear(
+            last_channels,
+            num_classes,
+        )
 
     def forward(self, x):
         for blk in self.blocks:

@@ -21,6 +21,13 @@ class GrayToRGB(object):
 
 
 def get_dataset(name, split_path):
+    # Load dataset using Pytorch API, for Caltech101 and Caltech256,
+    # images are resize to 256 and convert from GrayToRGB (if needed)
+    # before return to unify the input.
+
+    # Load dataset, for Caltech101 and Caltech256 dataset,
+    # if split_path is specifed and exists, then split dataset base on it;
+    # if file has not existed yet, create split file.
     if name == "MNIST":
         transform = transforms.ToTensor()
         return (

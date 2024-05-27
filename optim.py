@@ -19,6 +19,8 @@ class CosineSchedule(object):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
 
+    # Calculate the learning based on the warmup_steps, max_steps
+    # using formula of CosineAnealing function
     def __call__(self, cur_step: int):
         if cur_step <= self.warmup_steps:
             return cur_step / self.warmup_steps * self.base_lr
@@ -36,6 +38,7 @@ class CosineSchedule(object):
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = self.__call__(self.cur_step)
 
+    # This is for consistency with Pytorch API
     def state_dict(self):
         return {
             "cur_step": self.cur_step,
@@ -45,6 +48,7 @@ class CosineSchedule(object):
             "max_steps": self.max_steps,
         }
 
+    # This is for consistency with Pytorch API
     def load_state_dict(self, state_dict):
         self.cur_step = state_dict["cur_step"]
         self.base_lr = state_dict["base_lr"]

@@ -25,11 +25,33 @@ import yaml
 
 def create_args():
     parser = ArgumentParser()
-    parser.add_argument("--train", action="store_true")
-    parser.add_argument("--valid", action="store_true")
-    parser.add_argument("--device", default="cpu", type=str)
-    parser.add_argument("--eval-log-dir", default="", type=str)
+    parser.add_argument(
+        "--train", action="store_true", help="Whether to train model"
+    )
+    parser.add_argument(
+        "--valid", action="store_true", help="Whether to run validation"
+    )
+    parser.add_argument(
+        "--device", default="cpu", type=str, help="Device to run model on"
+    )
+    parser.add_argument(
+        "--eval-log-dir",
+        default="",
+        type=str,
+        help="Path to evaluation result file",
+    )
     # Model
+    parser.add_argument(
+        "--transfer-learning-num-classes",
+        default=0,
+        type=int,
+        help="Number of classes of pretained model",
+    )
+    parser.add_argument(
+        "--transfer-learning",
+        default="",
+        type=str,
+    )
     parser.add_argument(
         "--model",
         required=True,
@@ -40,41 +62,115 @@ def create_args():
         "--mlp-dropout-rate",
         default=0,
         type=int,
+        help="Dropout rate of linear layers",
     )
     parser.add_argument(
         "--conv-dropout-rate",
         default=0,
         type=int,
+        help="Dropout rate of convolution layers",
     )
     # Dataset
-    parser.add_argument("--split-path", default="", type=str)
-    parser.add_argument("--hog", action="store_true")
+    parser.add_argument(
+        "--split-path",
+        default="",
+        type=str,
+        help="Path to file containing information about how to split dataset. If not specify, then dataset is random splitted",
+    )
     parser.add_argument(
         "--dataset",
         choices=["MNIST", "FashionMNIST", "Caltech101", "Caltech256"],
+        help="Which dataset to use",
     )
-    parser.add_argument("--num-workers", default=0, type=int)
+    parser.add_argument(
+        "--num-workers",
+        default=0,
+        type=int,
+        help="Number of workers in dataloader",
+    )
 
     # Training
-    parser.add_argument("--epochs", default=100, type=int)
-    parser.add_argument("--start-epochs", default=1, type=int)
-    parser.add_argument("--batch-size", default=16, type=int)
-    parser.add_argument("--base-lr", default=0.005, type=float)
-    parser.add_argument("--target-lr", default=0.00001, type=float)
-    parser.add_argument("--warmup-epochs", default=5, type=int)
-    parser.add_argument("--max-epochs", default=70, type=int)
-    parser.add_argument("--fig-dir", default="", type=str)
-    parser.add_argument("--patience", default=10, type=int)
-    parser.add_argument("--weight-decay", default=0.001, type=float)
+    parser.add_argument(
+        "--epochs", default=100, type=int, help="How many epochs to train model"
+    )
+    parser.add_argument(
+        "--start-epochs", default=1, type=int, help="Epoch to start from"
+    )
+    parser.add_argument(
+        "--batch-size",
+        default=16,
+        type=int,
+        help="Batch size used to feed into models",
+    )
+    parser.add_argument(
+        "--base-lr",
+        default=0.005,
+        type=float,
+        help="Base/Initial learning rate",
+    )
+    parser.add_argument(
+        "--target-lr",
+        default=0.00001,
+        type=float,
+        help="Target/Final learning rate",
+    )
+    parser.add_argument(
+        "--warmup-epochs",
+        default=5,
+        type=int,
+        help="How many epochs are used for warming up",
+    )
+    parser.add_argument(
+        "--max-epochs",
+        default=70,
+        type=int,
+        help="How many epochs to decay learning rate",
+    )
+    parser.add_argument(
+        "--fig-dir",
+        default="",
+        type=str,
+        help="Directory to save figures/plots about training process",
+    )
+    parser.add_argument(
+        "--patience",
+        default=10,
+        type=int,
+        help="Number of epochs without improvement to wait before stopping train",
+    )
 
     # Checkpoints
-    parser.add_argument("--save-path", default="", type=str)
-    parser.add_argument("--save-freq", default=5, type=int)
-    parser.add_argument("--save-best-path", default="", type=str)
-    parser.add_argument("--save-best-acc-path", default="", type=str)
+    parser.add_argument(
+        "--save-path", default="", type=str, help="Where to save checkpoint"
+    )
+    parser.add_argument(
+        "--save-freq",
+        default=5,
+        type=int,
+        help="How frequent to save checkpoint",
+    )
+    parser.add_argument(
+        "--save-best-path",
+        default="",
+        type=str,
+        help="Where to save best checkpoint (according to loss)",
+    )
+    parser.add_argument(
+        "--save-best-acc-path",
+        default="",
+        type=str,
+        help="Where to save best checkpoint (according to accuracy)",
+    )
 
-    parser.add_argument("--load-ckpt", default="", type=str)
-    parser.add_argument("--resume", default="", type=str)
+    parser.add_argument(
+        "--load-ckpt", default="", type=str, help="Where to load checkpoint"
+    )
+    parser.add_argument(
+        "--resume",
+        default="",
+        type=str,
+        help="Resume training from specified checkpoint",
+    )
 
     return parser.parse_args()
 
@@ -91,6 +187,7 @@ def main(args):
     print(f"Total: {len(valid_dataset) + len(train_dataset)} samples")
     print("=" * os.get_terminal_size().columns)
 
+    # Create dataloaders
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -107,6 +204,8 @@ def main(args):
         num_workers=args.num_workers,
         pin_memory=True,
     )
+
+    # Declare how to transform images in train/valid set
     image_transforms = {
         "train": transforms.Compose(
             [
@@ -143,7 +242,11 @@ def main(args):
 
     model = Net(
         3,
-        num_classes,
+        (
+            num_classes
+            if args.transfer_learning_num_classes == 0
+            else args.transfer_learning_num_classes
+        ),
         net_configs,
         mlp_configs,
         args.mlp_dropout_rate,
@@ -152,6 +255,7 @@ def main(args):
         init_down=init_down,
     )
     model.to(device)
+    # Load checkpoint if user specifies
     if len(args.load_ckpt):
         state_dict = torch.load(args.load_ckpt, map_location=device)
         if "model" in state_dict:
@@ -162,11 +266,23 @@ def main(args):
 
     loss_fn = nn.CrossEntropyLoss()
     if args.train:
+        if len(args.transfer_learning):
+            state_dict = torch.load(args.transfer_learning, map_location=device)
+            if "model" in state_dict:
+                model.load_state_dict(state_dict["model"])
+            else:
+                model.load_state_dict(state_dict)
+            for param in model.parameters():
+                param.requires_grad = False
+            model.create_head(num_classes, mlp_configs)
+            print(f"transfer learning from {args.transfer_learning}")
         print("=" * os.get_terminal_size().columns)
         summary(model, (3, 224, 224), args.batch_size, args.device)
         print("=" * os.get_terminal_size().columns)
+
         train_loss_values = []
         valid_loss_values = []
+        # Declare optimizer and lr scheduler
         optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=args.base_lr,
@@ -179,6 +295,7 @@ def main(args):
             max_steps=args.max_epochs,
             warmup_steps=args.warmup_epochs,
         )
+        # Resume training if user specifies
         if len(args.resume):
             args.start_epochs = load_checkpoint(
                 args.resume, model, optimizer, scheduler, args.device
@@ -190,6 +307,7 @@ def main(args):
             os.makedirs(os.path.dirname(args.save_best_path), exist_ok=True)
         if len(args.fig_dir) > 0:
             os.makedirs(args.fig_dir, exist_ok=True)
+
         min_loss = math.inf
         max_acc = -math.inf
         not_better = 0
@@ -218,7 +336,7 @@ def main(args):
             train_loss_values.append(train_loss)
             valid_loss_values.append(valid_loss["Test"])
 
-            # Save best checkpoint based on loss value
+            # Save best checkpoint based
             if len(args.save_best_path) > 0 and valid_loss["Test"] < min_loss:
                 save_checkpoint(
                     args.save_best_path,
@@ -243,6 +361,7 @@ def main(args):
             min_loss = min(min_loss, valid_loss["Test"])
             max_acc = max(max_acc, acc["Test"])
 
+            # If exceeding patience, then stop training and save checkpoint
             if not_better == args.patience:
                 print(f"Stopping because of exceeding patience")
                 if len(args.save_path) > 0:
@@ -255,7 +374,7 @@ def main(args):
                     )
                 break
 
-            # Save every freq (default: 5) epochs
+            # Save checkpoint
             if len(args.save_path) > 0 and (
                 e % args.save_freq == 0 or e == args.epochs
             ):
@@ -291,6 +410,7 @@ def main(args):
                 + args.save_path.split("/")[-1].split(".")[-2]
                 + ".pdf"
             )
+    # Run evaluation on both train and valid set
     if args.valid:
         acc, loss, preds, labels = valid_one_epoch(
             model,

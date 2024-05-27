@@ -275,6 +275,7 @@ def main(args):
             for param in model.parameters():
                 param.requires_grad = False
             model.create_head(num_classes, mlp_configs)
+            model.to(args.device)
             print(f"transfer learning from {args.transfer_learning}")
         print("=" * os.get_terminal_size().columns)
         summary(model, (3, 224, 224), args.batch_size, args.device)

@@ -53,6 +53,10 @@ def create_args():
         type=str,
     )
     parser.add_argument(
+        "--freeze",
+        action="store_true",
+    )
+    parser.add_argument(
         "--model",
         required=True,
         type=str,
@@ -272,8 +276,11 @@ def main(args):
                 model.load_state_dict(state_dict["model"])
             else:
                 model.load_state_dict(state_dict)
-            for param in model.parameters():
-                param.requires_grad = False
+
+            if args.freeze:
+                for param in model.parameters():
+                    param.requires_grad = False
+
             model.create_head(num_classes, mlp_configs)
             model.to(args.device)
             print(f"transfer learning from {args.transfer_learning}")
